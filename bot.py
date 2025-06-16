@@ -18,19 +18,19 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['PDF ➤ Word', 'Word ➤ PDF'], ['JPG ➤ Word', 'ZIP File']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Fayl konvertatsiya botiga xush kelibsiz!\nFayl turini tanlang:", reply_markup=reply_markup)
+    await update.message.reply_text("Fayl konvertatsiya botına xosh kelibsiz!\nFayl turin tańlań:", reply_markup=reply_markup)
 
 # 🖱 Tanlovni eslab qolish
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     choice = update.message.text
     context.user_data["choice"] = choice
-    await update.message.reply_text(f"Endi faylni yuboring: ({choice})")
+    await update.message.reply_text(f"Endi fayldı jiberiń: ({choice})")
 
 # 📄 Fayl kelganda
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
     if not doc:
-        await update.message.reply_text("Iltimos, hujjat faylini yuboring.")
+        await update.message.reply_text("Iltimas, hujjet faylın jiberiń.")
         return
 
     file = await doc.get_file()
@@ -66,7 +66,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 zipf.write(filepath, arcname=os.path.basename(filepath))
 
         else:
-            await update.message.reply_text("Tanlov mos emas yoki fayl formati noto‘g‘ri.")
+            await update.message.reply_text("Tańlaw durıs emes yamasa fayl formatı nadurıs.")
             return
 
         await update.message.reply_document(document=open(output_path, 'rb'))
