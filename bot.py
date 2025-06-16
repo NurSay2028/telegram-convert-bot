@@ -1,102 +1,94 @@
 import os
 import uuid
 import zipfile
-import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ContextTypes, filters
-)
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from pdf2docx import Converter
-from docx2pdf import convert
 from docx import Document
+from docx2pdf import convert
+from PIL import Image
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = 'YOUR_BOT_TOKEN'  # <-- bu yerga o'z tokeningni yoz
 
-user_actions = {}
+# 📁 Fayllar saqlanadigan vaqtinchalik papka
+TEMP_DIR = "temp"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
+# 🏁 Start buyrug‘i
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("📄 PDF ➡️ Word", callback_data="pdf2word")],
-        [InlineKeyboardButton("📝 Word ➡️ PDF", callback_data="word2pdf")],
-        [InlineKeyboardButton("🗂 ZIP qılıw", callback_data="zip")],
-        [InlineKeyboardButton("🖼 JPG ➡️ Word", callback_data="jpg2word")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Konvert qılıw túrin tanlan:", reply_markup=reply_markup)
+    keyboard = [['PDF ➤ Word', 'Word ➤ PDF'], ['JPG ➤ Word', 'ZIP File']]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("Fayl konvertatsiya botiga xush kelibsiz!\nFayl turini tanlang:", reply_markup=reply_markup)
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = str(query.from_user.id)
-    user_actions[user_id] = query.data
-    await query.edit_message_text("Endi fayldı jiberin.")
+# 🖱 Tanlovni eslab qolish
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    choice = update.message.text
+    context.user_data["choice"] = choice
+    await update.message.reply_text(f"Endi faylni yuboring: ({choice})")
 
+# 📄 Fayl kelganda
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = update.message.document or update.message.photo[-1]
-    user_id = str(update.message.from_user.id)
-    action = user_actions.get(user_id)
-
-    if not action:
-        await update.message.reply_text("Iltimas, /start basip, ameldi tanlan.")
+    doc = update.message.document
+    if not doc:
+        await update.message.reply_text("Iltimos, hujjat faylini yuboring.")
         return
 
-    file_path = f"{uuid.uuid4()}"
-    if update.message.document:
-        filename = update.message.document.file_name
-        ext = os.path.splitext(filename)[1]
-        file_path += ext
-    else:
-        file_path += ".jpg"
+    file = await doc.get_file()
+    filename = doc.file_name
+    ext = filename.split('.')[-1].lower()
+    uid = str(uuid.uuid4())
+    filepath = os.path.join(TEMP_DIR, f"{uid}_{filename}")
+    await file.download_to_drive(filepath)
 
-    tg_file = await file.get_file()
-    await tg_file.download_to_drive(file_path)
+    choice = context.user_data.get("choice", "")
+    output_path = ""
 
     try:
-        if action == "pdf2word" and file_path.endswith(".pdf"):
-            output_path = file_path.replace(".pdf", ".docx")
-            cv = Converter(file_path)
+        if choice == 'PDF ➤ Word' and ext == 'pdf':
+            output_path = filepath.replace('.pdf', '.docx')
+            cv = Converter(filepath)
             cv.convert(output_path)
             cv.close()
-            await update.message.reply_document(open(output_path, "rb"))
 
-        elif action == "word2pdf" and file_path.endswith(".docx"):
-            output_path = file_path.replace(".docx", ".pdf")
-            convert(file_path, output_path)
-            await update.message.reply_document(open(output_path, "rb"))
+        elif choice == 'Word ➤ PDF' and ext == 'docx':
+            output_path = filepath.replace('.docx', '.pdf')
+            convert(filepath, output_path)
 
-        elif action == "zip":
-            output_path = file_path + ".zip"
-            with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(file_path, arcname=os.path.basename(file_path))
-            await update.message.reply_document(open(output_path, "rb"))
-
-        elif action == "jpg2word" and file_path.endswith(".jpg"):
-            output_path = file_path.replace(".jpg", ".docx")
+        elif choice == 'JPG ➤ Word' and ext in ['jpg', 'jpeg', 'png']:
+            output_path = filepath.replace('.jpg', '.docx').replace('.jpeg', '.docx').replace('.png', '.docx')
             doc = Document()
-            doc.add_picture(file_path)
+            doc.add_picture(filepath, width=docx.shared.Inches(6))
             doc.save(output_path)
-            await update.message.reply_document(open(output_path, "rb"))
+
+        elif choice == 'ZIP File':
+            output_path = filepath + ".zip"
+            with zipfile.ZipFile(output_path, 'w') as zipf:
+                zipf.write(filepath, arcname=os.path.basename(filepath))
 
         else:
-            await update.message.reply_text("Fayl formatı nadurıs yaki tanlan?an amel nadurıs.")
+            await update.message.reply_text("Tanlov mos emas yoki fayl formati noto‘g‘ri.")
+            return
+
+        await update.message.reply_document(document=open(output_path, 'rb'))
+
     except Exception as e:
-        await update.message.reply_text(f"Qátelik: {e}")
+        await update.message.reply_text(f"Xatolik yuz berdi: {e}")
+
     finally:
-        for f in [file_path,
-                  file_path.replace(".pdf", ".docx"),
-                  file_path.replace(".docx", ".pdf"),
-                  file_path + ".zip",
-                  file_path.replace(".jpg", ".docx")]:
-            if os.path.exists(f):
-                os.remove(f)
+        for f in os.listdir(TEMP_DIR):
+            os.remove(os.path.join(TEMP_DIR, f))
 
-async def main():
+# 🔧 Botni ishga tushirish
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
-    await app.run_polling()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
+
+    print("Bot ishga tushdi...")
+    app.run_polling()
+
+if __
+name__ == "__main__":
+    main()
