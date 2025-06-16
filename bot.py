@@ -10,7 +10,7 @@ from pdf2docx import Converter
 from docx2pdf import convert
 from docx import Document
 
-TOKEN = os.getenv("8184845398:AAEXBTaU054xZAjlFLUUVSsxmvcrCeuiL8k")  # ← Bot tokenini shu yerga yoz
+TOKEN = os.getenv("BOT_TOKEN")  # ← Bot tokenini shu yerga yoz
 
 user_actions = {}
 
