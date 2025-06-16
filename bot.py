@@ -89,6 +89,5 @@ def main():
     print("Bot ishga tushdi...")
     app.run_polling()
 
-if __
-name__ == "__main__":
+if __name__ == "__main__":
     main()
