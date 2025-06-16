@@ -10,8 +10,6 @@ from pdf2docx import Converter
 from docx2pdf import convert
 from docx import Document
 
-TOKEN = os.getenv("BOT_TOKEN")  # ← Bot tokenini shu yerga yoz
-
 user_actions = {}
 
 # /start komandasi
@@ -19,13 +17,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📄 PDF ➡️ Word", callback_data="pdf2word")],
         [InlineKeyboardButton("📝 Word ➡️ PDF", callback_data="word2pdf")],
-        [InlineKeyboardButton("🗂️ ZIP qılıw", callback_data="zip")],
+        [InlineKeyboardButton("🗂 ZIP qılıw", callback_data="zip")],
         [InlineKeyboardButton("🖼 JPG ➡️ Word", callback_data="jpg2word")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Konvert qılıw túrin tanlan:", reply_markup=reply_markup)
 
-# Callback tugmani ushlash
+# Tugmani bosganda
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -33,7 +31,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_actions[user_id] = query.data
     await query.edit_message_text("Endi fayldı jiberin.")
 
-# Fayl qabul qilish
+# Fayl yuborilganda
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.document or update.message.photo[-1]
     user_id = str(update.message.from_user.id)
@@ -43,7 +41,6 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Iltimas, /start basip, ameldi tanlan.")
         return
 
-    # Fayl nomi va joyi
     file_path = f"{uuid.uuid4()}"
     if update.message.document:
         filename = update.message.document.file_name
@@ -80,7 +77,6 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             doc.add_picture(file_path)
             doc.save(output_path)
             await update.message.reply_document(open(output_path, "rb"))
-
         else:
             await update.message.reply_text("Fayl formatı nadurıs yaki tanlan?an amel nadurıs.")
     except Exception as e:
@@ -94,13 +90,23 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if os.path.exists(f):
                 os.remove(f)
 
-# Botni ishga tushirish
-def main():
+# Asosiy bot funksiyasi
+async def main():
+    TOKEN = os.getenv("BOT_TOKEN")
+    if not TOKEN:
+        print("⚠️ BOT_TOKEN topilmadi! Render Environment'da BOT_TOKEN ni qo‘shganingga ishonch hosil qil.")
+        return
+
     app = ApplicationBuilder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
-    app.run_polling()
 
-if __name__ == '__main__':
-    main()
+    print("✅ Bot ishga tushdi...")
+    await app.run_polling()
+
+# Botni ishga tushurish
+if name == "main":
+    import asyncio
+    asyncio.run(main())
