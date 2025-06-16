@@ -1,17 +1,16 @@
 import os
 import uuid
 import zipfile
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
+    Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, ContextTypes, filters
 )
 from pdf2docx import Converter
 from docx2pdf import convert
 from docx import Document
+import asyncio
 
-# BOT_TOKEN render.com da Environment Variables ichida saqlanadi
 TOKEN = os.getenv("BOT_TOKEN")
 
 user_actions = {}
@@ -27,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Konvert qılıw túrin tanlan:", reply_markup=reply_markup)
 
-# Tugmalarni ushlash
+# Tugmalarni qayta ishlash
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -35,14 +34,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_actions[user_id] = query.data
     await query.edit_message_text("Endi fayldı jiberin.")
 
-# Faylni qabul qilib, kerakli amalni bajarish
+# Faylni qabul qilish
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.document or update.message.photo[-1]
     user_id = str(update.message.from_user.id)
     action = user_actions.get(user_id)
 
     if not action:
-        await update.message.reply_text("Iltimas, /start basip, amel túrin tanlan.")
+        await update.message.reply_text("Iltimas, /start basıp, amel tanlan.")
         return
 
     file_path = f"{uuid.uuid4()}"
@@ -83,9 +82,9 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_document(open(output_path, "rb"))
 
         else:
-            await update.message.reply_text("Fayl formatı yaki amel nadurıs.")
+            await update.message.reply_text("Fayl formatı nadurıs yaki amel tanlanbagan.")
     except Exception as e:
-        await update.message.reply_text(f"Qátelik boldı: {e}")
+        await update.message.reply_text(f"Xatolik: {e}")
     finally:
         for f in [file_path,
                   file_path.replace(".pdf", ".docx"),
@@ -95,14 +94,12 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if os.path.exists(f):
                 os.remove(f)
 
-# Botni ishga tushurish
+# Asosiy funksiya
 async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-
+    app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
-
     await app.run_polling()
 
 if __name__ == "__main__":
