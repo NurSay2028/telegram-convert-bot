@@ -8,7 +8,7 @@ from docx import Document
 from docx2pdf import convert
 from PIL import Image
 
-TOKEN = os.environ["TOKEN"]  # <-- bu yerga o'z tokeningni yoz
+TOKEN = '8184845398:AAEXBTaU054xZAjlFLUUVSsxmvcrCeuiL8k'  # <-- bu yerga o'z tokeningni yoz
 
 # 📁 Fayllar saqlanadigan vaqtinchalik papka
 TEMP_DIR = "temp"
