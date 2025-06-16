@@ -107,6 +107,6 @@ async def main():
     await app.run_polling()
 
 # Botni ishga tushurish
-if name == "main":
+if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
