@@ -1,4 +1,3 @@
-Нұрсұлтан Халмуратов, [17.06.2025 10:23]
 import os
 import uuid
 import zipfile
@@ -118,7 +117,6 @@ def webhook():
 def health():
     return "Bot is alive!", 200
 
-Нұрсұлтан Халмуратов, [17.06.2025 10:23]
 # Botni ishga tushurish
 if __name__ == "__main__":
     telegram_app.run_webhook(
