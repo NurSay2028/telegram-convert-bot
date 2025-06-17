@@ -1,47 +1,37 @@
 import os
 import uuid
 import zipfile
-import threading
-import time
-import requests
-from flask import Flask, request
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from pdf2docx import Converter
 from docx import Document
 from docx.shared import Inches
 from docx2pdf import convert
 from PIL import Image
 
-# 🎯 Tokenni o‘zgartirmaymiz — aynan sen berganing qoladi
-TOKEN = '8184845398:AAEXBTaU054xZAjlFLUUVSsxmvcrCeuiL8k'
-WEBHOOK_URL = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/{TOKEN}"
+# TOKEN atrof-muhitdan olinadi (Railway Variables orqali)
+TOKEN = os.environ["TOKEN"]
 
-# 📁 Fayllar saqlanadigan vaqtinchalik papka
 TEMP_DIR = "temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# ⚙️ Flask ilova
-flask_app = Flask(name)
-telegram_app = Application.builder().token(TOKEN).build()
-
-# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['PDF ➤ Word', 'Word ➤ PDF'], ['JPG ➤ Word', 'ZIP File']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Fayl konvertatsiya botına xosh kelibsiz!\nFayl turin tańlań:", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "Fayl konvertatsiya botına xush kelibsiz!\nFayl turin tanlang:", 
+        reply_markup=reply_markup
+    )
 
-# Tanlovni saqlash
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     choice = update.message.text
     context.user_data["choice"] = choice
-    await update.message.reply_text(f"Endi fayldı jiberiń: ({choice})")
+    await update.message.reply_text(f"Endi faylni yuboring: ({choice})")
 
-# Faylni qabul qilish va konvertatsiya
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
     if not doc:
-        await update.message.reply_text("Iltimas, hujjet faylın jiberiń.")
+        await update.message.reply_text("Iltimos, fayl yuboring.")
         return
 
     file = await doc.get_file()
@@ -67,9 +57,9 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif choice == 'JPG ➤ Word' and ext in ['jpg', 'jpeg', 'png']:
             output_path = filepath.rsplit('.', 1)[0] + '.docx'
-            docx_doc = Document()
-            docx_doc.add_picture(filepath, width=Inches(6))
-            docx_doc.save(output_path)
+            docx_file = Document()
+            docx_file.add_picture(filepath, width=Inches(6))
+            docx_file.save(output_path)
 
         elif choice == 'ZIP File':
             output_path = filepath + ".zip"
@@ -77,7 +67,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 zipf.write(filepath, arcname=os.path.basename(filepath))
 
         else:
-            await update.message.reply_text("Tańlaw durıs emes yamasa fayl formatı nadurıs.")
+            await update.message.reply_text("Fayl turi yoki tanlov noto‘g‘ri.")
             return
 
         await update.message.reply_document(document=open(output_path, 'rb'))
@@ -89,38 +79,14 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for f in os.listdir(TEMP_DIR):
             os.remove(os.path.join(TEMP_DIR, f))
 
-# 💤 Bot uxlab qolmasligi uchun ping-funktsiya
-def keep_awake():
-    while True:
-        try:
-            requests.get(f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/")
-        except:
-            pass
-        time.sleep(600)
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
 
-threading.Thread(target=keep_awake, daemon=True).start()
+    print("Bot ishga tushdi...")
+    app.run_polling()
 
-# Handlerlar
-telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-telegram_app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
-
-# Webhook route
-@flask_app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    telegram_app.update_queue.put(update)
-    return "ok"
-
-# Health check
-@flask_app.route("/", methods=["GET"])
-def health():
-    return "Bot is alive!", 200
-
-# Botni ishga tushurish
 if __name__ == "__main__":
-    telegram_app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 8443)),
-        webhook_url=WEBHOOK_URL
-    )
+    main()
