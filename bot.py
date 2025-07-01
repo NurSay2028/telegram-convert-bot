@@ -18,19 +18,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['PDF ➤ Word', 'Word ➤ PDF'], ['JPG ➤ Word', 'ZIP File']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "Fayl konvertatsiya botına xush kelibsiz!\nFayl turin tanlang:",
+        "Fayl konvertatsiya botına xosh kelibsiz!\nFayl túrin tańlań:",
         reply_markup=reply_markup
     )
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     choice = update.message.text
     context.user_data["choice"] = choice
-    await update.message.reply_text(f"Endi faylni yuboring: ({choice})")
+    await update.message.reply_text(f"Endi fayldı jiberiń: ({choice})")
 
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
     if not doc:
-        await update.message.reply_text("Iltimos, fayl yuboring.")
+        await update.message.reply_text("Iltimas, fayl jiberiń.")
         return
 
     file = await doc.get_file()
@@ -68,14 +68,14 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 zipf.write(filepath, arcname=os.path.basename(filepath))
 
         else:
-            await update.message.reply_text("Fayl turi yoki tanlov noto‘g‘ri.")
+            await update.message.reply_text("Fayl túri yaki tańlaw nadurıs.")
             return
 
         with open(output_path, 'rb') as f:
             await update.message.reply_document(document=f)
 
     except Exception as e:
-        await update.message.reply_text(f"Xatolik yuz berdi: {e}")
+        await update.message.reply_text(f"Qátelik júz berdi: {e}")
 
     finally:
         for f in os.listdir(TEMP_DIR):
@@ -87,7 +87,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
 
-    print("Bot ishga tushdi...")
+    print("Bot iske tústi...")
     app.run_polling()
 
 if __name__ == "__main__":
