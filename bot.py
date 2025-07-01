@@ -6,11 +6,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 from pdf2docx import Converter
 from docx import Document
 from docx.shared import Inches
-from docx2pdf import convert
 from PIL import Image
 
-# TOKEN atrof-muhitdan olinadi (Railway Variables orqali)
-TOKEN = os.environ["TOKEN"]
+# TOKEN from environment
+TOKEN = os.environ.get("TOKEN")
 
 TEMP_DIR = "temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
@@ -19,7 +18,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['PDF ➤ Word', 'Word ➤ PDF'], ['JPG ➤ Word', 'ZIP File']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "Fayl konvertatsiya botına xush kelibsiz!\nFayl turin tanlang:", 
+        "Fayl konvertatsiya botına xush kelibsiz!\nFayl turin tanlang:",
         reply_markup=reply_markup
     )
 
@@ -53,6 +52,8 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif choice == 'Word ➤ PDF' and ext == 'docx':
             output_path = filepath.replace('.docx', '.pdf')
+            # ⚠️ docx2pdf requires Windows/macOS, comment out if on Linux
+            from docx2pdf import convert
             convert(filepath, output_path)
 
         elif choice == 'JPG ➤ Word' and ext in ['jpg', 'jpeg', 'png']:
@@ -70,7 +71,8 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Fayl turi yoki tanlov noto‘g‘ri.")
             return
 
-        await update.message.reply_document(document=open(output_path, 'rb'))
+        with open(output_path, 'rb') as f:
+            await update.message.reply_document(document=f)
 
     except Exception as e:
         await update.message.reply_text(f"Xatolik yuz berdi: {e}")
