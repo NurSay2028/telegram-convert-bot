@@ -1,5 +1,5 @@
-python-telegram-bot==20.7
-pdf2docx==0.5.6
-docx2pdf==0.1.8
-python-docx==1.1.0
+python-telegram-bot==20.3
+pdf2docx
+python-docx
+docx2pdf
 Pillow
